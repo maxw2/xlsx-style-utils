@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="https://unpkg.com/ele-table-container/lib/ele-table.js"></script>
+<script src="https://unpkg.com/xlsx-js-style/dist/xlsx.bundle.js"></script>
+<script src="/lib/xlsx-style-utils.js"></script>
+
+<body>
+    <div id="app">
+        <ele-table :columns="columns"></ele-table>
+    </div>
+</body>
+<script>
+    new Vue({
+        el: '#app',
+        components: {
+            eleTable: EleTable.Table,
+            eleTableContainer: EleTable.TableContainer,
+        },
+        data() {
+            return {
+                columns: [{
+                    label: '基础信息',
+                    props: 'data',
+                    children: [{
+                        label: '姓名',
+                    }, {
+                        label: '年龄'
+                    }]
+                }]
+            }
+        }
+    })
+
+
+</script>
+
+</html>
