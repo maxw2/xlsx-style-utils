@@ -1,46 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-</head>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
-<script src="https://unpkg.com/element-ui/lib/index.js"></script>
-<script src="https://unpkg.com/ele-table-container/lib/ele-table.js"></script>
-<script src="https://unpkg.com/xlsx-js-style/dist/xlsx.bundle.js"></script>
-<script src="/lib/xlsx-style-utils.js"></script>
+  </head>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/element-ui/lib/theme-chalk/index.css"
+  />
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <script src="https://unpkg.com/ele-table-container/lib/ele-table.js"></script>
+  <script
+    lang="javascript"
+    src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"
+  ></script>
+  <!-- <script src="https://unpkg.com/xlsx-js-style/dist/xlsx.bundle.js"></script> -->
+  <script src="https://unpkg.com/mockjs/dist/mock.js"></script>
+  <script src="/lib/xlsx-style-utils.js"></script>
+  <!-- <script src="./src/test.js"></script> -->
 
-<body>
+  <body>
     <div id="app">
-        <ele-table :columns="columns"></ele-table>
+      <ele-table :columns="columns" :data="list" height="80vh"></ele-table>
+      <el-button @click="handleTable">table导出</el-button>
+      <el-button @click="handleAoa">aoa导出</el-button>
     </div>
-</body>
-<script>
-    new Vue({
-        el: '#app',
-        components: {
-            eleTable: EleTable.Table,
-            eleTableContainer: EleTable.TableContainer,
+  </body>
+  <script>
+    const columns = [
+      {
+        label: "序号",
+        prop: "index",
+        type: "index",
+      },
+      {
+        label: "orderID",
+        prop: "orderId",
+      },
+      {
+        label: "记录信息",
+        prop: "jilu",
+      },
+      {
+        label: "周龄",
+        prop: "zhouling",
+      },
+      {
+        label: "日龄",
+        prop: "riling",
+      },
+      {
+        label: "存栏数",
+        prop: "cunlan",
+      },
+      {
+        label: "出栏数",
+        prop: "chulan",
+      },
+      {
+        label: "空数据",
+        prop: "nullData",
+      },
+      {
+        label: "死淘情况",
+        children: [
+          // {
+          //   label: "订单号",
+          //   prop: "orderId",
+          // },
+          {
+            label: "死亡",
+            prop: "siwang",
+          },
+          {
+            label: "淘汰",
+            prop: "taotai",
+          },
+          {
+            label: "外卖/屠宰",
+            prop: "waimai",
+          },
+          {
+            label: "死淘",
+            prop: "sitao",
+          },
+          {
+            label: "出栏数",
+            prop: "chulanshu",
+          },
+        ],
+      },
+      {
+        label: "饲料消耗情况",
+        children: [
+          {
+            label: "料号",
+            prop: "liaohao",
+          },
+          {
+            label: "耗料量（g/只/天）",
+            children: [
+              {
+                label: "实际",
+                prop: "shiji",
+                children: [
+                  {
+                    label: "2- 1",
+                    children: [
+                      {
+                        label: "3- 1",
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                label: "标准",
+                prop: "biaozhun",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        label: "空数据",
+        prop: "nullData",
+      },
+    ];
+
+    const list = Mock.mock({
+      "data|10": [
+        {
+          "orderId|1-3": 1,
+          jilu: () => Mock.Random.date("yyyy.M.d"),
+          zhouling: () => Mock.Random.cname(),
+          "riling|1-100.1-10": 1,
+          cunlan: () => Mock.Random.csentence(5, 10),
+          chulan: () => Mock.Random.csentence(5, 10),
+          "siwang|1-100.1-10": 1,
+          taotai: () => Mock.Random.csentence(5, 10),
+          waimai: () => Mock.Random.csentence(5, 10),
+          sitao: () => Mock.Random.string(7, 10),
+          // chulanshu: () => Random.dataImage('200x100', 'Hello Mock.js!'),
+          chulanshu: () => Mock.Random.csentence(5, 10),
+          liaohao: () => Mock.Random.csentence(5, 10),
+          shiji: () => Mock.Random.csentence(5, 10),
+          biaozhun: () => Mock.Random.csentence(5, 10),
+          // 周小计
+          zhouxiaoji: Mock.Random.boolean(),
         },
-        data() {
-            return {
-                columns: [{
-                    label: '基础信息',
-                    props: 'data',
-                    children: [{
-                        label: '姓名',
-                    }, {
-                        label: '年龄'
-                    }]
-                }]
-            }
-        }
-    })
+      ],
+    });
+
+    console.log(list, "list");
+
+    new Vue({
+      el: "#app",
+      components: {
+        eleTable: EleTable.Table,
+        eleTableContainer: EleTable.TableContainer,
+      },
+      data() {
+        return {
+          columns,
+          list: list.data,
+        };
+      },
+      methods: {
+        handleTable() {},
+        handleAoa() {
+          // xlsxUtils.colJson_to_aoa(this.columns)
+          // xlsxUtils.data_to_aoa(this.columns)
+          const [data, merges] = xlsxUtils.json_to_aoa(
+            this.columns,
+            this.list,
+            ["orderId"]
+          );
+
+      
+          data.forEach((row) => {
+            row.forEach((val, colIdx) => {
+              if (colIdx === 1) {
+                if (val > 2)
+                  row[colIdx] = {
+                    v: val,
+                    t: "s",
+                    s: { fill: { fgColor: { rgb: "E9E9E9" } } },
+                  };
+              }
+            });
+          });
+
+          console.log(data, merges);
+          xlsxUtils.writeFile(data,merges)
+          //  xlsxUtils.createsColWch(data)
 
 
-</script>
-
+        },
+      },
+    });
+  </script>
 </html>
