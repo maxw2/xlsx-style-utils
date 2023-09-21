@@ -20,21 +20,27 @@
   <script src="https://unpkg.com/mockjs/dist/mock.js"></script>
   <script src="/lib/xlsx-style-utils.js"></script>
   <!-- <script src="./src/test.js"></script> -->
-
+  <!-- <script src="./ele-table.js"></script> -->
   <body>
     <div id="app">
-      <ele-table :columns="columns" :data="list" height="80vh"></ele-table>
+      <ele-table
+        :columns="columns"
+        :data="list"
+        height="80vh"
+        :merges="['orderId', 'test']"
+        :span-method="getSpan"
+      ></ele-table>
       <el-button @click="handleTable">table导出</el-button>
       <el-button @click="handleAoa">aoa导出</el-button>
     </div>
   </body>
   <script>
     const columns = [
-      {
-        label: "序号",
-        prop: "index",
-        type: "index",
-      },
+      // {
+      //   label: "序号",
+      //   type: "index",
+        
+      // },
       {
         label: "orderID",
         prop: "orderId",
@@ -61,7 +67,7 @@
       },
       {
         label: "空数据",
-        prop: "nullData",
+        prop: "test",
       },
       {
         label: "死淘情况",
@@ -111,6 +117,7 @@
                     children: [
                       {
                         label: "3- 1",
+                        prop: 'shiji'
                       },
                     ],
                   },
@@ -131,8 +138,9 @@
     ];
 
     const list = Mock.mock({
-      "data|10": [
+      "data|1000": [
         {
+          "test|1-2": 1,
           "orderId|1-3": 1,
           jilu: () => Mock.Random.date("yyyy.M.d"),
           zhouling: () => Mock.Random.cname(),
@@ -154,8 +162,6 @@
       ],
     });
 
-    console.log(list, "list");
-
     new Vue({
       el: "#app",
       components: {
@@ -166,9 +172,88 @@
         return {
           columns,
           list: list.data,
+          arr: [],
         };
       },
+      mounted() {
+        const prop = "orderId";
+        let map = {};
+        this.arr = [];
+
+        this.list.forEach((row, index) => {
+          const nextRow = this.list[index + 1];
+
+          if(!nextRow) {
+            this.arr.push(map[prop])
+            return 
+          } 
+
+          if (row[prop] === nextRow[prop]) {
+            if (map[prop]) {
+              map[prop].rowspan++;
+              this.arr.push({ rowspan: 0, colspan: 1 });
+            } else {
+              map[prop] = { rowspan: 1, colspan: 1 };
+              this.arr.push(map[prop]);
+            }
+          } else {
+            if (map[prop]) {
+              this.arr.push({
+                rowspan: 0,
+                colspan: 1,
+              });
+              map[prop].rowspan++
+              map[prop] = null;
+            } else {
+              this.arr.push({
+                rowspan: 1,
+                colspan: 1,
+              });
+            }
+          }
+        });
+
+        // this.arr = this.list.map((val) => {
+        //   if (!map[prop]) {
+        //     map[prop] = {
+        //       row: 1,
+        //       col: 1,
+        //       value: val[prop],
+        //     };
+        //   }
+
+        //   if (val[prop] === map[prop].value) {
+        //     map[prop].row++;
+
+        //     return {
+        //       rowspan: 0,
+        //       colspan: 1,
+        //     };
+        //   } else {
+        //     const obj = {
+        //       rowspan: map[prop].row,
+        //       colspan: map[prop].col,
+        //     };
+
+        //     map[prop] = {
+        //       row: 1,
+        //       col: 1,
+        //       value: val[prop],
+        //     };
+
+        //     return obj;
+        //   }
+        // });
+
+        console.log(this.arr, "arr");
+      },
       methods: {
+        getSpan({ row, column, rowIndex, columnIndex }) {
+          if (columnIndex === 0) {
+            console.log(this.arr[rowIndex]);
+            return this.arr[rowIndex];
+          }
+        },
         handleTable() {},
         handleAoa() {
           // xlsxUtils.colJson_to_aoa(this.columns)
@@ -179,7 +264,6 @@
             ["orderId"]
           );
 
-      
           data.forEach((row) => {
             row.forEach((val, colIdx) => {
               if (colIdx === 1) {
@@ -193,11 +277,11 @@
             });
           });
 
-          console.log(data, merges);
-          xlsxUtils.writeFile(data,merges)
+          let n_merges = xlsxUtils.tableSpan_to_merges(this.arr, 1, 5)
+
+          console.log(data, merges,n_merges);
+          xlsxUtils.writeFile(data, merges);
           //  xlsxUtils.createsColWch(data)
-
-
         },
       },
     });

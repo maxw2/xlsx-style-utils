@@ -110,7 +110,7 @@ export function data_to_aoa(columns: Columns, data: Data, mergeArr?: Array<strin
 }
 
 export function createsColWch(data: any, maxWch: number = 100, minWch: number = 1) {
-    let colsWch: any = data.slice(-1)[0].map(() => { return { wch: minWch } }).concat({wch: minWch})
+    let colsWch: any = data.slice(-1)[0].map(() => { return { wch: minWch } }).concat({ wch: minWch })
     console.log(data.slice(-1)[0], 'cols', colsWch)
     data.forEach(row => {
         // console.log(row, 'row')
@@ -121,12 +121,55 @@ export function createsColWch(data: any, maxWch: number = 100, minWch: number = 
                 const l = colsWch[colIdx].wch || 0
                 // console.log(value,colsWch[colIdx], l && Math.max(l, len))
                 colsWch[colIdx].wch = l && Math.max(l, len)
-
             }
         })
     })
 
     return colsWch
+
+}
+
+export function tableSpan_to_merges(spanArr: any, colIdx, rowStarIdx = 0) {
+    let merges = []
+    spanArr.forEach((row, rowIdx) => {
+        if(rowIdx + 1 >= spanArr.length) return 
+        if (Array.isArray(row)) {
+            const findIdx = spanArr.slice(rowIdx + 1).findIndex(val => val[0])
+            if (findIdx) {
+                merges.push({
+                    s: {
+                        r: rowIdx + rowStarIdx,
+                        c: colIdx
+                    },
+                    e: {
+                        r: rowIdx + findIdx + rowStarIdx,
+                        c: colIdx
+                    }
+                })
+            }
+
+        }
+        else {
+            // console.log(spanArr.slice(rowIdx + 1), 'spanArr.slice(rowIdx + 1)')
+            const findIdx = spanArr.slice(rowIdx + 1).findIndex(val => val?.rowspan)
+            if (findIdx) {
+                merges.push({
+                    s: {
+                        r: rowIdx + rowStarIdx,
+                        c: colIdx
+                    },
+                    e: {
+                        r: rowIdx + findIdx + rowStarIdx,
+                        c: colIdx
+                    }
+                })
+            }
+
+
+        }
+    })
+
+    return merges
 
 }
 
@@ -283,6 +326,8 @@ export function writeFile(array: any, merges?: Array<Range>, colsWch?: Array<any
     ws['!merges'] = merges
     // ws['!cols'] = colsWch
     ws['!cols'] = createsColWch(array)
+    console.log()
+
     var wb = XLSX.utils.book_new();
     console.log(wb, ws, ws['!cols'])
     XLSX.utils.book_append_sheet(wb, ws)
