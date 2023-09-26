@@ -1,15 +1,13 @@
 import * as XLSX from 'xlsx-js-style'
-import type { Range } from 'xlsx-js-style'
+
 /**
  * 
  */
-export function json_to_aoa(columns: Columns, data: Data, merge: Array<string>) {
+export function json_to_aoa(columns: Columns, data: Data, mergeProps: Array<string>) {
     let array, merges
 
-    console.log('123')
-
     const [hArray, hMerges] = colJson_to_aoa(columns)
-    const [dAarray, dMerges] = data_to_aoa(columns, data, merge)
+    const [dAarray, dMerges] = data_to_aoa(columns, data, mergeProps)
 
     array = hArray.concat(dAarray)
     merges = hMerges.concat(dMerges)
@@ -24,7 +22,6 @@ export function json_to_aoa(columns: Columns, data: Data, merge: Array<string>) 
 export function json_to_file(columns: Columns, data: Data, merge: Array<string>) {
     let array, merges
 
-
     const [hArray, hMerges] = colJson_to_aoa(columns)
     const [dAarray, dMerges] = data_to_aoa(columns, data, merge)
 
@@ -37,7 +34,7 @@ export function json_to_file(columns: Columns, data: Data, merge: Array<string>)
     writeFile(array, merges)
 }
 
-export function colJson_to_aoa(columns: Columns): [Aoa, Array<Range>] {
+export function colJson_to_aoa(columns: Columns): [Aoa, Merges] {
 
     const aoa = createHeadAoa(columns)
     const merges = createHeadMerge(aoa)
@@ -45,15 +42,17 @@ export function colJson_to_aoa(columns: Columns): [Aoa, Array<Range>] {
     return [aoa, merges]
 }
 
-export function data_to_aoa(columns: Columns, data: Data, mergeArr?: Array<string>): [Aoa, Array<Range>] {
-    const propsArr = floatProps(columns)
+export function data_to_aoa(columns: Columns, data: Data, mergeArr?: Array<string>, cbFn?: Function): [Aoa, Merges, flatProps,] {
+    let flatProps = floatProps(columns as Columns)
+    // if (typeof columns[0] !== 'string') flatProps = floatProps(columns as Columns)
+    // else flatProps = columns as flatProps
     const rowLen = deepRow(columns)
     let dataArr: Aoa = []
     const mergeMap: any = {}
-    let merges: Array<Range> = []
+    let merges: Merges = []
 
     data.forEach((rowVal, rowIdx) => {
-        propsArr.forEach((prop, colIdx) => {
+        flatProps.forEach((prop, colIdx) => {
             if (!prop) return
             if (!dataArr[rowIdx]) dataArr[rowIdx] = []
             const value = rowVal[prop]
@@ -132,7 +131,7 @@ export function createsColWch(data: any, maxWch: number = 100, minWch: number = 
 export function tableSpan_to_merges(spanArr: any, colIdx, rowStarIdx = 0) {
     let merges = []
     spanArr.forEach((row, rowIdx) => {
-        if(rowIdx + 1 >= spanArr.length) return 
+        if (rowIdx + 1 >= spanArr.length) return
         if (Array.isArray(row)) {
             const findIdx = spanArr.slice(rowIdx + 1).findIndex(val => val[0])
             if (findIdx) {
@@ -199,14 +198,17 @@ function createHeadAoa(columns: Columns): Aoa {
 
 function createRow(col: Column, rowIdx = 0, colIdx = 0, colsArr: any = []): number {
     if (!colsArr[rowIdx]) colsArr[rowIdx] = []
-    colsArr[rowIdx][colIdx] = col.label
+    const label = col.label
+    colsArr[rowIdx][colIdx] = {
+        v: label,
+        s: col?.s
+    }
 
     if (col.children) {
         rowIdx++
         col.children.forEach((_col, index) => {
             if (index > 0) colIdx++
             colIdx = createRow(_col, rowIdx, colIdx, colsArr)
-
         })
     }
 
@@ -214,7 +216,7 @@ function createRow(col: Column, rowIdx = 0, colIdx = 0, colsArr: any = []): numb
     return colIdx
 }
 
-function createHeadMerge(headeAoa: Aoa): Array<Range> {
+function createHeadMerge(headeAoa: Aoa): Merges {
     let merges: Array<Range> = []
 
     headeAoa.forEach((row, rowIdx) => {
@@ -285,14 +287,14 @@ function createHeadMerge(headeAoa: Aoa): Array<Range> {
 }
 
 //
-function floatProps(cols: Columns): Array<string | undefined> {
-    let propsArr: Array<string | undefined> = []
+function floatProps(cols: Columns): flatProps {
+    let propsArr: flatProps = []
 
     cols.forEach(val => {
         if (val.children) {
             propsArr = propsArr.concat(floatProps(val.children))
         }
-        else propsArr.push(val.prop)
+        else propsArr.push(val.prop || null)
 
     })
     return propsArr
@@ -332,5 +334,60 @@ export function writeFile(array: any, merges?: Array<Range>, colsWch?: Array<any
     console.log(wb, ws, ws['!cols'])
     XLSX.utils.book_append_sheet(wb, ws)
 
-    XLSX.writeFile(wb, "SheetJS.xlsx");
+    // XLSX.writeFile(wb, "SheetJS.xlsx");
+}
+
+
+export class XlsxBook {
+    wbs = []
+    sheets: Sheets = {}
+    constructor(sheetsOpt: SheetsOpt) {
+        this.init(sheetsOpt)
+    }
+    init(sheetsOpt: SheetsOpt) {
+        if (sheetsOpt) {
+            sheetsOpt.forEach(sheet => {
+                const { sheetName = 'sheet1', columns, data, merge } = sheet
+                const [colAoa, colMerge] = colJson_to_aoa(columns)
+                console.log(colAoa, colMerge, '1')
+                const _flatProps = floatProps(columns)
+                console.log(_flatProps,'_flatProps')
+                const [dataAoa, dataMerge, flatProps] = data_to_aoa(columns, data, merge)
+
+                this.sheets[sheetName] = {
+                    name: sheetName,
+                    columns,
+                    flatProps,
+                    colAoa,
+                    colMerge,
+                    data,
+                    dataAoa,
+                    dataMerge
+                }
+            })
+        }
+    }
+    writeFile(fileName: string = "SheetJS.xlsx") {
+        var wb = XLSX.utils.book_new();
+
+        this.wbs = []
+        Object.keys(this.sheets).forEach(key => {
+            const { colAoa, colMerge, dataAoa, dataMerge } = this.sheets[key]
+            let data = colAoa?.concat(dataAoa)
+            let merge = colMerge.concat(dataMerge)
+
+            var ws = XLSX.utils.aoa_to_sheet(data);
+            // { dense: true }
+            ws['!merges'] = merge
+            // ws['!cols'] = colsWch
+            ws['!cols'] = createsColWch(data)
+
+ 
+            this.wbs.push(ws)
+            XLSX.utils.book_append_sheet(wb, ws)
+
+        })
+        XLSX.writeFile(wb, fileName);
+
+    }
 }
